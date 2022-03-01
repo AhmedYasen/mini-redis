@@ -33,6 +33,7 @@ func main() {
 				if _, e := conn.Read(buffer); e == nil {
 					cmd := fmt.Sprintf("%s", buffer)
 					cmd = strings.ToLower(cmd[:strings.Index(cmd, "\n")])
+					fmt.Printf("cmd hex: %x\n", cmd)
 					switch cmd {
 					case "ping":
 						{
