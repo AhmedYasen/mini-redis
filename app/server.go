@@ -40,7 +40,7 @@ func main() {
 						}
 					default:
 						{
-
+							conn.Write([]byte(fmt.Sprint("+WRONG CMD\r\n")))
 						}
 					}
 
