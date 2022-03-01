@@ -29,7 +29,18 @@ func main() {
 	for {
 
 		if _, e := conn.Read(buffer); e == nil {
+			// go func(cmd string) {
+			// 	switch strings.ToLower(cmd) {
+			// 	case "ping":
+			// 		{
+			// 			conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
+			// 		}
+			// 	default:
+			// 		{
 
+			// 		}
+			// 	}
+			// }(fmt.Sprintf("%s", buffer))
 			conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
 
 		} else {
