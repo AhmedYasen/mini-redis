@@ -26,28 +26,27 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		buffer := make([]byte, 1000)
 
-		if _, e := conn.Read(buffer); e == nil {
-			go func(cmd string) {
+		go func() {
+			buffer := make([]byte, 1000)
+			for {
+				if _, e := conn.Read(buffer); e == nil {
+					cmd := fmt.Sprintf("%s", buffer)
+					cmd = strings.ToLower(cmd[:strings.Index(cmd, "\n")])
+					switch cmd {
+					case "ping":
+						{
+							conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
+						}
+					default:
+						{
 
-				cmd = strings.ToLower(cmd[:strings.Index(cmd, "\n")])
-				switch cmd {
-				case "ping":
-					{
-						conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
+						}
 					}
-				default:
-					{
 
-					}
 				}
-
-			}(fmt.Sprintf("%s", buffer))
-
-		} else {
-			break
-		}
+			}
+		}()
 
 	}
 
