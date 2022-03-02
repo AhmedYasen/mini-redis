@@ -94,12 +94,14 @@ func command_timeout_handler(db *Db, waker <-chan bool) {
 			}
 
 		}
+		ms := least_timeout - int(time.Now().Unix()*1000) - 50
+		fmt.Println("MS: ", ms)
 		select {
 		case <-waker:
 			{
 
 			}
-		case <-time.After(time.Duration(least_timeout-int(time.Now().Unix()*1000)-10) * time.Millisecond):
+		case <-time.After(time.Duration(ms) * time.Millisecond):
 			{
 				fmt.Println("Deleting")
 				db.mu.Lock()
