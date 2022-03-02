@@ -45,8 +45,6 @@ func handle_connections(conn net.Conn) {
 
 			cmds, err := parse_request(req)
 
-			fmt.Println(cmds)
-
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(2)
@@ -54,7 +52,7 @@ func handle_connections(conn net.Conn) {
 			var command [2]string
 			index := 0
 			for _, cmd_part := range cmds {
-
+				cmd_part = strings.ToLower(cmd_part)
 				switch cmd_part {
 				case "ping":
 					{
@@ -63,7 +61,12 @@ func handle_connections(conn net.Conn) {
 				default:
 					{
 						command[index] = cmd_part
-						if index == 1 {
+						index++
+						fmt.Println("Default:")
+						fmt.Println(index)
+
+						if index > 1 {
+							fmt.Println(command)
 							index = 0
 							resp, err := handle_command(&command)
 							fmt.Println("RESP echo cmd: ", resp)
@@ -73,7 +76,7 @@ func handle_connections(conn net.Conn) {
 								conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(resp), resp)))
 							}
 						}
-						index++
+
 					}
 				}
 			}
