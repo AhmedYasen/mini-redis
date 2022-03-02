@@ -93,7 +93,7 @@ func command_timeout_handler(db *Db, waker <-chan bool) {
 				{
 
 				}
-			case <-time.After(time.Duration(least_timeout-int(time.Now().Unix()*1000)) * time.Millisecond):
+			case <-time.After(time.Duration(least_timeout-int(time.Now().Unix()*1000)-10) * time.Millisecond):
 				{
 					db.mu.Lock()
 					db.Remove(key_of_least_timeout)
