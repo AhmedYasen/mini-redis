@@ -156,6 +156,7 @@ func handle_command(command []string, db *Db, waker_ch chan<- bool) (response st
 					db.mu.Lock()
 					db.Remove(cmd_name(key))
 					db.mu.Unlock()
+					fmt.Println("DB", db.persistence)
 				}(db, int64(timeout), command[1])
 			}
 
