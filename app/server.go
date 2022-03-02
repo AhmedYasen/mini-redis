@@ -66,7 +66,7 @@ func handle_connections(conn net.Conn) {
 						if index == 1 {
 							index = 0
 							resp, err := handle_command(&command)
-
+							fmt.Println("RESP echo cmd: ", resp)
 							if err != nil {
 								conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
 							} else {
