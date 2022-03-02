@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ import (
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
+	fmt.Printf("Go version: %s\n", runtime.Version())
 	db := Db{persistence: make(map[cmd_name]cmd_params)}
 	// Uncomment this block to pass the first stage
 
