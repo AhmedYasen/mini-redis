@@ -42,12 +42,7 @@ func handle_connections(conn net.Conn) {
 		if _, e := conn.Read(buffer); e == nil {
 
 			req := fmt.Sprintf("%s", buffer)
-			fmt.Printf("Request: %x", req)
 			cmds, err := parse_request(req)
-
-			fmt.Println()
-			fmt.Println("parse request result")
-			fmt.Println(cmds)
 
 			if err != nil {
 				fmt.Println(err)
@@ -66,14 +61,10 @@ func handle_connections(conn net.Conn) {
 					{
 						command[index] = cmd_part
 						index++
-						fmt.Println("Default:")
-						fmt.Println(index)
-
 						if index > 1 {
 							fmt.Println(command)
 							index = 0
 							resp, err := handle_command(&command)
-							fmt.Println("RESP echo cmd: ", resp)
 							if err != nil {
 								conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
 							} else {
@@ -107,7 +98,6 @@ func handle_command(command *[2]string) (response string, err error) {
 func parse_request(req string) (ret []string, err error) {
 	arr_len_re := regexp.MustCompile("\\*\\d+\r\n")
 	arr_req_heads := arr_len_re.FindStringSubmatch(req)
-	fmt.Printf("heads arr length: %d", len(arr_req_heads))
 	if len(arr_req_heads) == 0 {
 		err = errors.New("Request Err: Wrong head format")
 	}
@@ -120,6 +110,7 @@ func parse_request(req string) (ret []string, err error) {
 	}
 
 	req = strings.TrimLeft(req, arr_req_head)
+
 	for arr_len > 0 {
 		arr_len--
 		switch req[0:1] {
@@ -129,7 +120,7 @@ func parse_request(req string) (ret []string, err error) {
 				bulk_str := bulk_re.FindStringSubmatch(req)[0]
 				str := strings.TrimSpace(bulk_str[strings.Index(bulk_str, "\n"):])
 				ret = append(ret, str)
-				req = strings.TrimLeft(req, bulk_str)
+				req = req[len(bulk_str):]
 			}
 		case ":":
 			{
