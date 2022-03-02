@@ -65,6 +65,7 @@ func handle_connections(conn net.Conn, db *Db, waker_ch chan<- bool) {
 				if index >= len(cmds) {
 					index = 0
 					resp, err := handle_command(command, db, waker_ch)
+					fmt.Println("RESP: ", resp)
 					if err != nil {
 						conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
 					} else if resp == "<nil>" {
@@ -83,24 +84,27 @@ func command_timeout_handler(db *Db, waker <-chan bool) {
 	var key_of_least_timeout cmd_name
 	for {
 		least_timeout := int(^uint(0) >> 1)
-
+		if len(db.persistence) < 1 {
+			<-waker
+		}
 		for key, val := range db.persistence {
-			if val.timeout < least_timeout {
+			if val.timeout > 0 && val.timeout < least_timeout {
 				key_of_least_timeout = key
 				least_timeout = val.timeout
 			}
 
-			select {
-			case <-waker:
-				{
+		}
+		select {
+		case <-waker:
+			{
 
-				}
-			case <-time.After(time.Duration(least_timeout-int(time.Now().Unix()*1000)) * time.Millisecond):
-				{
-					db.mu.Lock()
-					db.Remove(key_of_least_timeout)
-					db.mu.Unlock()
-				}
+			}
+		case <-time.After(time.Duration(least_timeout-int(time.Now().Unix()*1000)) * time.Millisecond):
+			{
+				fmt.Println("Deleting")
+				db.mu.Lock()
+				db.Remove(key_of_least_timeout)
+				db.mu.Unlock()
 			}
 		}
 
@@ -145,10 +149,13 @@ func handle_command(command []string, db *Db, waker_ch chan<- bool) (response st
 				waker_ch <- true
 			}
 
+			fmt.Println("DB: ", db.persistence)
+
 			response = "OK"
 		}
 	case "get":
 		{
+
 			response = fmt.Sprint(db.Get(cmd_name(command[1])).val)
 		}
 	default:
