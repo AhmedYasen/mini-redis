@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,7 +16,6 @@ import (
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
-	fmt.Printf("Go version: %s\n", runtime.Version())
 	db := Db{persistence: make(map[cmd_name]cmd_params)}
 	// Uncomment this block to pass the first stage
 
@@ -58,32 +56,21 @@ func handle_connections(conn net.Conn, db *Db, waker_ch chan<- bool) {
 				fmt.Println(err)
 				os.Exit(2)
 			}
-			var command [5]string
+			var command []string
 			index := 0
 			for _, cmd_part := range cmds {
 				cmd_part = strings.ToLower(cmd_part)
-				// switch cmd_part {
-				// case "ping":
-				// 	{
-				// 		conn.Write([]byte("+PONG\r\n"))
-				// 	}
-				// default:
-				// 	{
-				command[index] = cmd_part
+				command = append(command, cmd_part)
 				index++
 				if index >= len(cmds) {
-					fmt.Println(command)
 					index = 0
-					resp, err := handle_command(&command, db, waker_ch)
+					resp, err := handle_command(command, db, waker_ch)
 					if err != nil {
 						conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
 					} else {
 						conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(resp), resp)))
 					}
 				}
-
-				// 	}
-				// }
 			}
 
 		}
@@ -118,7 +105,7 @@ func command_timeout_handler(db *Db, waker <-chan bool) {
 	}
 }
 
-func handle_command(command *[5]string, db *Db, waker_ch chan<- bool) (response string, err error) {
+func handle_command(command []string, db *Db, waker_ch chan<- bool) (response string, err error) {
 	switch command[0] {
 	case "ping":
 		{
@@ -131,6 +118,7 @@ func handle_command(command *[5]string, db *Db, waker_ch chan<- bool) (response 
 	case "set":
 		{
 			timeout := -1
+
 			if len(command) > 4 {
 
 				if command[3] != "px" {
@@ -189,7 +177,6 @@ func parse_request(req string) (ret []string, err error) {
 
 	for arr_len > 0 {
 		arr_len--
-		fmt.Println("REQ BEF SWTCH", req)
 		switch req[0:1] {
 		case "$":
 			{
