@@ -67,6 +67,8 @@ func handle_connections(conn net.Conn, db *Db, waker_ch chan<- bool) {
 					resp, err := handle_command(command, db, waker_ch)
 					if err != nil {
 						conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
+					} else if resp == "" {
+						conn.Write([]byte(fmt.Sprintf("$-1\r\n")))
 					} else {
 						conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(resp), resp)))
 					}
@@ -93,7 +95,7 @@ func command_timeout_handler(db *Db, waker <-chan bool) {
 				{
 
 				}
-			case <-time.After(time.Duration(least_timeout-int(time.Now().Unix()*1000)-10) * time.Millisecond):
+			case <-time.After(time.Duration(least_timeout-int(time.Now().Unix()*1000)) * time.Millisecond):
 				{
 					db.mu.Lock()
 					db.Remove(key_of_least_timeout)
