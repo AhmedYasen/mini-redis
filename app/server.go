@@ -45,6 +45,10 @@ func handle_connections(conn net.Conn) {
 
 			cmds, err := parse_request(req)
 
+			fmt.Println()
+			fmt.Println("parse request result")
+			fmt.Println(cmds)
+
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(2)
