@@ -147,7 +147,7 @@ func handle_command(command []string, db *Db, waker_ch chan<- bool) (response st
 		}
 	case "get":
 		{
-			response = fmt.Sprint(db.Get(cmd_name(command[1])))
+			response = fmt.Sprint(db.Get(cmd_name(command[1])).val)
 		}
 	default:
 		{
