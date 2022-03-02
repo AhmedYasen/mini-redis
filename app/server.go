@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	// Uncomment this block to pass the first stage
 	"net"
@@ -15,7 +16,7 @@ import (
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
-	db := Db{persistence: make(map[string]interface{})}
+	db := Db{persistence: make(map[cmd_name]cmd_params)}
 	// Uncomment this block to pass the first stage
 
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
@@ -23,6 +24,11 @@ func main() {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
+
+	waker_ch := make(chan bool)
+
+	go command_timeout_handler(&db, waker_ch)
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -30,13 +36,13 @@ func main() {
 			os.Exit(1)
 		}
 
-		go handle_connections(conn, &db)
+		go handle_connections(conn, &db, waker_ch)
 
 	}
 
 }
 
-func handle_connections(conn net.Conn, db *Db) {
+func handle_connections(conn net.Conn, db *Db, waker_ch chan<- bool) {
 	buffer := make([]byte, 1000)
 	for {
 		if _, e := conn.Read(buffer); e == nil {
@@ -50,54 +56,108 @@ func handle_connections(conn net.Conn, db *Db) {
 				fmt.Println(err)
 				os.Exit(2)
 			}
-			var command [3]string
+			var command [5]string
 			index := 0
 			for _, cmd_part := range cmds {
 				cmd_part = strings.ToLower(cmd_part)
-				switch cmd_part {
-				case "ping":
-					{
-						conn.Write([]byte("+PONG\r\n"))
-					}
-				default:
-					{
-						command[index] = cmd_part
-						index++
-						if index >= len(cmds) {
-							fmt.Println(command)
-							index = 0
-							resp, err := handle_command(&command, db)
-							if err != nil {
-								conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
-							} else {
-								conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(resp), resp)))
-							}
-						}
-
+				// switch cmd_part {
+				// case "ping":
+				// 	{
+				// 		conn.Write([]byte("+PONG\r\n"))
+				// 	}
+				// default:
+				// 	{
+				command[index] = cmd_part
+				index++
+				if index >= len(cmds) {
+					fmt.Println(command)
+					index = 0
+					resp, err := handle_command(&command, db, waker_ch)
+					if err != nil {
+						conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
+					} else {
+						conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(resp), resp)))
 					}
 				}
+
+				// 	}
+				// }
 			}
 
 		}
 	}
 }
 
-func handle_command(command *[3]string, db *Db) (response string, err error) {
+func command_timeout_handler(db *Db, waker <-chan bool) {
+	var key_of_least_timeout cmd_name
+	for {
+		least_timeout := int(^uint(0) >> 1)
+
+		for key, val := range db.persistence {
+			if val.timeout < least_timeout {
+				key_of_least_timeout = key
+				least_timeout = val.timeout
+			}
+
+			select {
+			case <-waker:
+				{
+
+				}
+			case <-time.After(time.Duration(least_timeout-int(time.Now().UnixMilli())) * time.Millisecond):
+				{
+					db.mu.Lock()
+					db.Remove(key_of_least_timeout)
+					db.mu.Unlock()
+				}
+			}
+		}
+
+	}
+}
+
+func handle_command(command *[5]string, db *Db, waker_ch chan<- bool) (response string, err error) {
 	switch command[0] {
+	case "ping":
+		{
+			response = "PONG"
+		}
 	case "echo":
 		{
 			response = command[1]
 		}
 	case "set":
 		{
+			timeout := -1
+			if len(command) > 3 {
+
+				if command[3] != "PX" {
+					err = fmt.Errorf("wrong '%s' argument", command[3])
+					return
+				}
+
+				timeout, err = strconv.Atoi(command[4])
+
+				if err != nil {
+					err = fmt.Errorf("cannot convert timeout because: %s", err)
+					return
+				}
+
+			}
+
 			db.mu.Lock()
-			db.Set(command[1], command[2])
+			db.Set(cmd_name(command[1]), command[2], int(time.Now().UnixMilli())+timeout)
 			db.mu.Unlock()
+
+			if timeout > 0 {
+				waker_ch <- true
+			}
+
 			response = "OK"
 		}
 	case "get":
 		{
-			response = fmt.Sprint(db.Get(command[1]))
+			response = fmt.Sprint(db.Get(cmd_name(command[1])))
 		}
 	default:
 		{
@@ -151,16 +211,27 @@ func parse_request(req string) (ret []string, err error) {
 	return
 }
 
-type Db struct {
-	mu          sync.Mutex
-	persistence map[string]interface{}
+type cmd_name string
+
+type cmd_params struct {
+	val     interface{}
+	timeout int
 }
 
-func (d *Db) Set(key string, val interface{}) bool {
-	d.persistence[key] = val
+type Db struct {
+	mu          sync.Mutex
+	persistence map[cmd_name]cmd_params
+}
+
+func (d *Db) Set(key cmd_name, val interface{}, timeout_ms int) bool {
+	d.persistence[key] = cmd_params{val: val, timeout: timeout_ms}
 	return true
 }
 
-func (d *Db) Get(key string) (val interface{}) {
+func (d *Db) Get(key cmd_name) cmd_params {
 	return d.persistence[key]
+}
+
+func (d *Db) Remove(key cmd_name) {
+	delete(d.persistence, "key")
 }
