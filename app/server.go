@@ -1,11 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	// Uncomment this block to pass the first stage
 	"net"
@@ -15,7 +15,7 @@ import (
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
-
+	db := Db{persistence: make(map[string]interface{})}
 	// Uncomment this block to pass the first stage
 
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
@@ -30,41 +30,43 @@ func main() {
 			os.Exit(1)
 		}
 
-		go handle_connections(conn)
+		go handle_connections(conn, &db)
 
 	}
 
 }
 
-func handle_connections(conn net.Conn) {
+func handle_connections(conn net.Conn, db *Db) {
 	buffer := make([]byte, 1000)
 	for {
 		if _, e := conn.Read(buffer); e == nil {
 
-			req := fmt.Sprintf("%s", buffer)
+			req := string(buffer)
 			cmds, err := parse_request(req)
+
+			fmt.Println("CMDS: ", cmds)
 
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(2)
 			}
-			var command [2]string
+			var command [3]string
 			index := 0
 			for _, cmd_part := range cmds {
 				cmd_part = strings.ToLower(cmd_part)
 				switch cmd_part {
 				case "ping":
 					{
-						conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
+						conn.Write([]byte("+PONG\r\n"))
 					}
 				default:
 					{
 						command[index] = cmd_part
 						index++
-						if index > 1 {
+						if index >= len(cmds) {
 							fmt.Println(command)
 							index = 0
-							resp, err := handle_command(&command)
+							resp, err := handle_command(&command, db)
 							if err != nil {
 								conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
 							} else {
@@ -80,15 +82,26 @@ func handle_connections(conn net.Conn) {
 	}
 }
 
-func handle_command(command *[2]string) (response string, err error) {
+func handle_command(command *[3]string, db *Db) (response string, err error) {
 	switch command[0] {
 	case "echo":
 		{
 			response = command[1]
 		}
+	case "set":
+		{
+			db.mu.Lock()
+			db.Set(command[1], command[2])
+			db.mu.Unlock()
+			response = "OK"
+		}
+	case "get":
+		{
+			response = fmt.Sprint(db.Get(command[1]))
+		}
 	default:
 		{
-			err = errors.New(fmt.Sprintf("Request Err: unknown command  %s", command[1]))
+			err = fmt.Errorf("request err: unknown command  %s", command[1])
 		}
 
 	}
@@ -99,13 +112,14 @@ func parse_request(req string) (ret []string, err error) {
 	arr_len_re := regexp.MustCompile("\\*\\d+\r\n")
 	arr_req_heads := arr_len_re.FindStringSubmatch(req)
 	if len(arr_req_heads) == 0 {
-		err = errors.New("Request Err: Wrong head format")
+		err = fmt.Errorf("request err: Wrong head format")
+		return
 	}
 	arr_req_head := arr_req_heads[0]
 	arr_len_str := strings.TrimSpace(arr_req_head)[1:]
 	arr_len, err := strconv.Atoi(arr_len_str)
 	if err != nil {
-		err = errors.New(fmt.Sprintf("Request Err: %s", err))
+		err = fmt.Errorf("request err: %s", err)
 		return
 	}
 
@@ -113,6 +127,7 @@ func parse_request(req string) (ret []string, err error) {
 
 	for arr_len > 0 {
 		arr_len--
+		fmt.Println("REQ BEF SWTCH", req)
 		switch req[0:1] {
 		case "$":
 			{
@@ -134,4 +149,18 @@ func parse_request(req string) (ret []string, err error) {
 	}
 
 	return
+}
+
+type Db struct {
+	mu          sync.Mutex
+	persistence map[string]interface{}
+}
+
+func (d *Db) Set(key string, val interface{}) bool {
+	d.persistence[key] = val
+	return true
+}
+
+func (d *Db) Get(key string) (val interface{}) {
+	return d.persistence[key]
 }
