@@ -70,7 +70,7 @@ func handle_connections(conn net.Conn) {
 							if err != nil {
 								conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
 							} else {
-								conn.Write([]byte(fmt.Sprintf("+%s\r\n", resp)))
+								conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(resp), resp)))
 							}
 						}
 					}
