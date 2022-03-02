@@ -94,7 +94,7 @@ func command_timeout_handler(db *Db, waker <-chan bool) {
 			}
 
 		}
-		ms := least_timeout - int(time.Now().Unix()*1000) - 50
+		ms := least_timeout - int(time.Now().Unix()*1000) - 90
 		fmt.Println("MS: ", ms)
 		select {
 		case <-waker:
