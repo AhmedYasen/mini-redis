@@ -67,7 +67,7 @@ func handle_connections(conn net.Conn, db *Db, waker_ch chan<- bool) {
 					resp, err := handle_command(command, db, waker_ch)
 					if err != nil {
 						conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
-					} else if resp == "" {
+					} else if resp == "<nil>" {
 						conn.Write([]byte(fmt.Sprintf("$-1\r\n")))
 					} else {
 						conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(resp), resp)))
