@@ -27,7 +27,7 @@ func main() {
 
 	waker_ch := make(chan bool)
 
-	// go command_timeout_handler(&db, waker_ch)
+	go command_timeout_handler(&db, waker_ch)
 
 	for {
 		conn, err := l.Accept()
@@ -144,20 +144,20 @@ func handle_command(command []string, db *Db, waker_ch chan<- bool) (response st
 			}
 
 			db.mu.Lock()
-			// db.Set(cmd_name(command[1]), command[2], int(time.Now().Unix()*1000)+timeout)
-			db.Set(cmd_name(command[1]), command[2], timeout)
+			db.Set(cmd_name(command[1]), command[2], int(time.Now().Unix()*1000)+timeout)
+			// db.Set(cmd_name(command[1]), command[2], timeout)
 			db.mu.Unlock()
 
 			if timeout > 0 {
-				// waker_ch <- true
-				go func(db *Db, timeout int64, key string) {
-					time.Sleep(time.Duration(timeout - 10))
-					fmt.Println("Deleting")
-					db.mu.Lock()
-					db.Remove(cmd_name(key))
-					db.mu.Unlock()
-					fmt.Println("DB", db.persistence)
-				}(db, int64(timeout), command[1])
+				waker_ch <- true
+				// go func(db *Db, timeout int64, key string) {
+				// 	time.Sleep(time.Duration(timeout - 10))
+				// 	fmt.Println("Deleting")
+				// 	db.mu.Lock()
+				// 	db.Remove(cmd_name(key))
+				// 	db.mu.Unlock()
+				// 	fmt.Println("DB", db.persistence)
+				// }(db, int64(timeout), command[1])
 			}
 
 			fmt.Println("DB: ", db.persistence)
@@ -245,5 +245,5 @@ func (d *Db) Get(key cmd_name) cmd_params {
 }
 
 func (d *Db) Remove(key cmd_name) {
-	delete(d.persistence, "key")
+	delete(d.persistence, key)
 }
