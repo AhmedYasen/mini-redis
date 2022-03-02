@@ -73,6 +73,7 @@ func handle_connections(conn net.Conn) {
 								conn.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(resp), resp)))
 							}
 						}
+						index++
 					}
 				}
 			}
