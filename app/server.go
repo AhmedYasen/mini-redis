@@ -94,7 +94,7 @@ func command_timeout_handler(db *Db, waker <-chan bool) {
 			}
 
 		}
-		ms := least_timeout - int(time.Now().Unix()*1000) - 90
+		ms := least_timeout - int(time.Now().Unix()*1000)
 		fmt.Println("MS: ", ms)
 		select {
 		case <-waker:
@@ -148,7 +148,14 @@ func handle_command(command []string, db *Db, waker_ch chan<- bool) (response st
 			db.mu.Unlock()
 
 			if timeout > 0 {
-				waker_ch <- true
+				// waker_ch <- true
+				go func(db *Db, timeout int64, key string) {
+					time.Sleep(time.Duration(timeout))
+					fmt.Println("Deleting")
+					db.mu.Lock()
+					db.Remove(cmd_name(key))
+					db.mu.Unlock()
+				}(db, int64(timeout), command[1])
 			}
 
 			fmt.Println("DB: ", db.persistence)
