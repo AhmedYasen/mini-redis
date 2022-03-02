@@ -34,19 +34,6 @@ func main() {
 			buffer := make([]byte, 1000)
 			for {
 				if _, e := conn.Read(buffer); e == nil {
-					// cmd := fmt.Sprintf("%s", buffer)
-					// cmd = strings.ToLower(cmd[:strings.Index(cmd, "\n")])
-					// fmt.Printf("cmd hex: %x\n", cmd)
-					// switch cmd {
-					// case "ping":
-					// 	{
-					// 		conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
-					// 	}
-					// default:
-					// 	{
-					// 		conn.Write([]byte(fmt.Sprint("+WRONG CMD\r\n")))
-					// 	}
-					// }
 
 					req := fmt.Sprintf("%s", buffer)
 
@@ -58,16 +45,28 @@ func main() {
 						fmt.Println(err)
 						os.Exit(2)
 					}
+					var command [2]string
+					index := 0
+					for _, cmd_part := range cmds {
 
-					for _, cmd := range cmds {
-						switch cmd {
+						switch cmd_part {
 						case "ping":
 							{
 								conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
 							}
 						default:
 							{
-								conn.Write([]byte(fmt.Sprint("+WRONG CMD\r\n")))
+								command[index] = cmd_part
+								if index == 1 {
+									index = 0
+									resp, err := handle_command(&command)
+
+									if err != nil {
+										conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
+									} else {
+										conn.Write([]byte(fmt.Sprintf("+%s\r\n", resp)))
+									}
+								}
 							}
 						}
 					}
@@ -78,6 +77,21 @@ func main() {
 
 	}
 
+}
+
+func handle_command(command *[2]string) (response string, err error) {
+	switch command[0] {
+	case "echo":
+		{
+			response = command[1]
+		}
+	default:
+		{
+			err = errors.New(fmt.Sprintf("Request Err: unknown command  %s", command[1]))
+		}
+
+	}
+	return
 }
 
 func parse_request(req string) (ret []string, err error) {
