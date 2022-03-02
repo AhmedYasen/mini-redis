@@ -30,53 +30,55 @@ func main() {
 			os.Exit(1)
 		}
 
-		go func() {
-			buffer := make([]byte, 1000)
-			for {
-				if _, e := conn.Read(buffer); e == nil {
-
-					req := fmt.Sprintf("%s", buffer)
-
-					cmds, err := parse_request(req)
-
-					fmt.Println(cmds)
-
-					if err != nil {
-						fmt.Println(err)
-						os.Exit(2)
-					}
-					var command [2]string
-					index := 0
-					for _, cmd_part := range cmds {
-
-						switch cmd_part {
-						case "ping":
-							{
-								conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
-							}
-						default:
-							{
-								command[index] = cmd_part
-								if index == 1 {
-									index = 0
-									resp, err := handle_command(&command)
-
-									if err != nil {
-										conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
-									} else {
-										conn.Write([]byte(fmt.Sprintf("+%s\r\n", resp)))
-									}
-								}
-							}
-						}
-					}
-
-				}
-			}
-		}()
+		go handle_connections(conn)
 
 	}
 
+}
+
+func handle_connections(conn net.Conn) {
+	buffer := make([]byte, 1000)
+	for {
+		if _, e := conn.Read(buffer); e == nil {
+
+			req := fmt.Sprintf("%s", buffer)
+
+			cmds, err := parse_request(req)
+
+			fmt.Println(cmds)
+
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(2)
+			}
+			var command [2]string
+			index := 0
+			for _, cmd_part := range cmds {
+
+				switch cmd_part {
+				case "ping":
+					{
+						conn.Write([]byte(fmt.Sprint("+PONG\r\n")))
+					}
+				default:
+					{
+						command[index] = cmd_part
+						if index == 1 {
+							index = 0
+							resp, err := handle_command(&command)
+
+							if err != nil {
+								conn.Write([]byte(fmt.Sprintf("- %s \r\n", err)))
+							} else {
+								conn.Write([]byte(fmt.Sprintf("+%s\r\n", resp)))
+							}
+						}
+					}
+				}
+			}
+
+		}
+	}
 }
 
 func handle_command(command *[2]string) (response string, err error) {
