@@ -129,9 +129,9 @@ func handle_command(command *[5]string, db *Db, waker_ch chan<- bool) (response 
 	case "set":
 		{
 			timeout := -1
-			if len(command) > 3 {
+			if len(command) > 4 {
 
-				if command[3] != "PX" {
+				if command[3] != "px" {
 					err = fmt.Errorf("wrong '%s' argument", command[3])
 					return
 				}
@@ -199,7 +199,10 @@ func parse_request(req string) (ret []string, err error) {
 			}
 		case ":":
 			{
-
+				int_re := regexp.MustCompile(":[[:digit:]]+\r\n")
+				int_str := int_re.FindStringSubmatch(req)[0][1:]
+				ret = append(ret, strings.TrimSpace(int_str))
+				req = req[len(int_str):]
 			}
 		default:
 			{
