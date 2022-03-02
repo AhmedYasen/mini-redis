@@ -42,7 +42,7 @@ func handle_connections(conn net.Conn) {
 		if _, e := conn.Read(buffer); e == nil {
 
 			req := fmt.Sprintf("%s", buffer)
-
+			fmt.Printf("Request: %x", req)
 			cmds, err := parse_request(req)
 
 			fmt.Println()
