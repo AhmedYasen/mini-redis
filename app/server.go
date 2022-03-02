@@ -27,7 +27,7 @@ func main() {
 
 	waker_ch := make(chan bool)
 
-	go command_timeout_handler(&db, waker_ch)
+	// go command_timeout_handler(&db, waker_ch)
 
 	for {
 		conn, err := l.Accept()
@@ -144,7 +144,8 @@ func handle_command(command []string, db *Db, waker_ch chan<- bool) (response st
 			}
 
 			db.mu.Lock()
-			db.Set(cmd_name(command[1]), command[2], int(time.Now().Unix()*1000)+timeout)
+			// db.Set(cmd_name(command[1]), command[2], int(time.Now().Unix()*1000)+timeout)
+			db.Set(cmd_name(command[1]), command[2], timeout)
 			db.mu.Unlock()
 
 			if timeout > 0 {
