@@ -151,7 +151,7 @@ func handle_command(command []string, db *Db, waker_ch chan<- bool) (response st
 			if timeout > 0 {
 				// waker_ch <- true
 				go func(db *Db, timeout int64, key string) {
-					time.Sleep(time.Duration(timeout))
+					time.Sleep(time.Duration(timeout - 10))
 					fmt.Println("Deleting")
 					db.mu.Lock()
 					db.Remove(cmd_name(key))
